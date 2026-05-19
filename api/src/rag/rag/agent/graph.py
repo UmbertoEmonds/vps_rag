@@ -1,12 +1,9 @@
 from functools import partial
-
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from rag.config.settings import get_settings
 from rag.rag.agent.nodes import escalate, evaluate, generate, guard_route, load_history, retrieve, save_turn
 from rag.rag.agent.state import AgentState
-
 
 def _guard_route_decision(state: AgentState) -> str:
     if not state.get("in_scope", True):
@@ -20,7 +17,7 @@ def _eval_decision(state: AgentState) -> str:
     return state.get("eval_decision", "answer")
 
 
-def build_graph(db: AsyncSession):
+def build_graph(db: AsyncSession, trace = None):
     """Build and compile the LangGraph RAG agent.
 
     Nodes that need DB access receive it via functools.partial so the graph
@@ -36,9 +33,9 @@ def build_graph(db: AsyncSession):
     graph = StateGraph(AgentState)
 
     graph.add_node("load_history", partial(load_history, db=db))
-    graph.add_node("guard_route", guard_route)
-    graph.add_node("retrieve", partial(retrieve, db=db))
-    graph.add_node("generate", generate)
+    graph.add_node("guard_route", partial(guard_route, trace=trace))
+    graph.add_node("retrieve", partial(retrieve, db=db, trace=trace))
+    graph.add_node("generate", partial(generate, trace=trace))
     graph.add_node("evaluate", evaluate)
     graph.add_node("escalate", escalate)
     graph.add_node("save_turn", partial(save_turn, db=db))
@@ -65,4 +62,6 @@ def build_graph(db: AsyncSession):
     print(rag_graph.get_graph().draw_ascii())
     print(rag_graph.get_graph().draw_mermaid())
 
-    return rag_graph
+
+    return rag_graclear
+

@@ -35,6 +35,7 @@ dependencies = [
     "pyjwt>=2.12.1",
     "python-json-logger>=4.1.0",
     "prometheus-client>=0.25.0",
+    "langfuse>=4.6.1",
 ]
 
 [project.optional-dependencies]

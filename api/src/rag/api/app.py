@@ -1,10 +1,34 @@
 import time
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import uuid
 import datetime as dt
 from contextlib import asynccontextmanager
 from urllib.request import Request
 from fastapi import FastAPI
-from contextvars import ContextVar
+
+from rag.api.context import request_id_var
 from rag.api.logger_config import logger
 from rag.api.routers import chat, eval, health, ingestion
 from rag.db.session import engine
@@ -17,10 +41,7 @@ async def lifespan(app: FastAPI):
     yield
     await engine.dispose()
 
-
 def create_app() -> FastAPI:
-    request_id_var: ContextVar[str] = ContextVar("request_id", default="")
-
     app = FastAPI(
         title="Simplon RAG Sample API",
         description="Sample RAG support chatbot API",

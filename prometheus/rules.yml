@@ -1,0 +1,20 @@
+groups:
+  - name: rag-api
+    rules:
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (endpoint, le) (rate(http_request_duration_seconds_bucket[5m]))) > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence p95 élevée sur {{ $labels.endpoint }}"
+          description: "p95 = {{ $value | humanizeDuration }}"
+
+      - alert: HighErrorRate
+        expr: sum by (endpoint) (rate(http_errors_total[5m])) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreurs élevé sur {{ $labels.endpoint }}"
+          description: "{{ $value | humanize }} erreurs/s"
