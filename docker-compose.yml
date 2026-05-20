@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-rag_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
     ports:
-      - "5432:5432"
+      - "5435:5435"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./api/data/db/init/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -24,6 +24,8 @@ services:
       target: dev
     container_name: simplon_rag_api
     depends_on:
+      fake-gcs:
+        condition: service_healthy
       postgres:
         condition: service_healthy
     env_file:
@@ -36,12 +38,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
       APP_ENV: development
       CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:4173,http://localhost:8501"
+      STORAGE_BUCKET: "simplon-rag-corpus"
+      STORAGE_GCS_ENDPOINT_URL: "http://fake-gcs:4443"
+      STORAGE_GCS_PROJECT: "local-dev"
     ports:
       - "8000:8000"
     volumes:
       - ./api:/app
-      - api_data_docs:/app/data/docs
-      - api_data_eval:/app/data/evaluation
+      - ./data/docs:/app/data/docs
+      - ./data/evaluation:/app/data/evaluation
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v1/health || exit 1"]
       interval: 10s
@@ -133,7 +138,43 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+  
+  fake-gcs:
+    image: fsouza/fake-gcs-server:latest
+    container_name: simplon_rag_fake_gcs
+    command: >
+      -scheme http
+      -port 4443
+      -external-url http://fake-gcs:4443
+      -backend filesystem
+      -filesystem-root /data
+    ports:
+      - "4443:4443"
+    volumes:
+      - fake_gcs_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4443/storage/v1/b"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
+  fake-gcs-init:
+    image: curlimages/curl:latest
+    container_name: simplon_rag_fake_gcs_init
+    depends_on:
+      fake-gcs:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        curl -sf -X POST 'http://fake-gcs:4443/storage/v1/b?project=local-dev'
+          -H 'Content-Type: application/json'
+          -d '{\"name\": \"simplon-rag-corpus\"}'
+        && echo 'Bucket simplon-rag-corpus created'
+        || echo 'Bucket already exists'
+      "
+    restart: "no"
+  
   langfuse:
     image: langfuse/langfuse:2
     container_name: simplon_rag_langfuse
@@ -153,8 +194,7 @@ services:
 
 volumes:
   pgdata:
-  api_data_docs:
-  api_data_eval:
-  grafana_data:
   loki_data:
   langfuse_pgdata:
+  fake_gcs_data:
+  grafana_data:

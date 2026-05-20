@@ -21,3 +21,4 @@ services:
       target: prod
     volumes: !override []
     restart: always
+
