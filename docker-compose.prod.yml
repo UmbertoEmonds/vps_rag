@@ -1,24 +1,14 @@
-# Production overrides: no source bind mounts, no hot reload, multi-worker API,
-# postgres port not exposed on the host.
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-services:
-  postgres:
-    ports: !reset []
-    restart: always
+version: '3.8'
 
+services:
   api:
     build:
-      target: prod
-    environment:
-      APP_ENV: production
-    volumes: !override
-      - api_data_docs:/app/data/docs
-      - api_data_eval:/app/data/evaluation
-    restart: always
+      context: ./api
+      target: prod  # Cible l'étape de production dans votre Dockerfile
+    image: europe-west9-docker.pkg.dev/sylvan-bonbon-496812-e6/images-docker/simplon-rag-api:latest
 
   frontend:
     build:
-      target: prod
-    volumes: !override []
-    restart: always
-
+      context: ./frontend
+      target: prod  # Cible l'étape de production dans votre Dockerfile
+    image: europe-west9-docker.pkg.dev/sylvan-bonbon-496812-e6/images-docker/simplon-rag-frontend:latest
