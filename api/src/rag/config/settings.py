@@ -36,6 +36,14 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.postgres_host.startswith("/"):
+            # Cloud Run + Cloud SQL Auth Proxy (socket Unix)
+            # asyncpg : host= en query param
+            return (
+                f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+                f"@/{self.postgres_db}"
+                f"?host={self.postgres_host}"
+            )
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -43,12 +51,18 @@ class Settings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
+        if self.postgres_host.startswith("/"):
+            # psycopg (sync) : host= en query param aussi
+            return (
+                f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+                f"@/{self.postgres_db}"
+                f"?host={self.postgres_host}"
+            )
         return (
             f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
-
-
+            )
+    
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
