@@ -5,11 +5,9 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag.api.context import request_id_var
 from rag.db.models.conversation import Conversation, Message
 from rag.rag.agent.graph import build_graph
 
-from rag.api.langfuse_config import langfuse
 import hashlib
 
 
@@ -56,19 +54,7 @@ class ChatService:
         if result.scalar_one_or_none() is None:
             raise ConversationNotFoundError(conversation_id)
 
-        # Crée la trace Langfuse pour toute la requête
-        user_id_hash = hashlib.sha256(str(conversation_id).encode()).hexdigest()[:16]
-        trace = langfuse.trace(
-            name="rag_chat",
-            user_id=user_id_hash,
-            metadata={
-                "request_id": request_id_var.get(),
-                "conversation_id": str(conversation_id),
-            },
-            input={"question": content},
-        )
-
-        graph = build_graph(db, trace=trace)
+        graph = build_graph(db)
         final_state = await graph.ainvoke(
             {
                 "conversation_id": str(conversation_id),
@@ -86,9 +72,6 @@ class ChatService:
                 "retry_count": 0,
             },
         )
-
-        trace.update(output={"answer": final_state["answer"]})
-        langfuse.flush()
 
         msg_result = await db.execute(
             select(Message)
