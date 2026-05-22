@@ -1,4 +1,6 @@
 import httpx
+import logging
+logger = logging.getLogger(__name__)
 
 
 def create_conversation(base_url: str) -> str:

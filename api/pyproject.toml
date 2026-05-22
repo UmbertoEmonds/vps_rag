@@ -3,7 +3,7 @@ name = "simplon-rag-sample"
 version = "0.1.0"
 description = "Sample RAG support chatbot"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     # Evaluation
     "ragas>=0.4.3",
@@ -15,6 +15,7 @@ dependencies = [
     "langgraph-checkpoint-postgres",
     # Mistral SDK
     "mistralai>=1.0",
+    # TODO : uncomment mistral
     # Database
     "sqlalchemy[asyncio]>=2.0",
     "alembic>=1.13",
@@ -32,6 +33,14 @@ dependencies = [
     # Config
     "pydantic-settings>=2.0",
     "pyjwt>=2.12.1",
+    "python-json-logger>=4.1.0",
+    "prometheus-client>=0.25.0",
+    "langfuse>=4.6.1",
+    # GCP
+    "google-api-core>=2.19.0",
+    "google-cloud-core>=2.4.1",
+    "google-auth>=2.29.0",
+    "google-cloud-storage>=2.16",
 ]
 
 [project.optional-dependencies]

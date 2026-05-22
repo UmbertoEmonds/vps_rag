@@ -57,7 +57,7 @@ async def load_history(state: AgentState, db: AsyncSession) -> dict:
     return {"messages": lc_messages}
 
 
-async def guard_route(state: AgentState) -> dict:
+async def guard_route(state: AgentState, trace=None) -> dict:
     """Single LLM call that decides scope and retrieval routing simultaneously.
 
     Returns:
@@ -74,6 +74,9 @@ async def guard_route(state: AgentState) -> dict:
         product_name=settings.product_name,
         user_message=state["user_message"],
     )
+
+    span = trace.span(name="guard_route", input={"message": len(state["user_message"])}) if trace else None
+
     response = await llm.ainvoke([HumanMessage(content=prompt)])
     try:
         data = json.loads(_extract_json(response.content))
@@ -84,6 +87,9 @@ async def guard_route(state: AgentState) -> dict:
         in_scope = True
         needs_retrieval = True
         category = ""
+
+    if span:
+        span.end(output={"in_scope": in_scope, "needs_retrieval": needs_retrieval})
 
     if not in_scope:
         return {
@@ -97,18 +103,25 @@ async def guard_route(state: AgentState) -> dict:
     return {"in_scope": True, "needs_retrieval": needs_retrieval, "category": category}
 
 
-async def retrieve(state: AgentState, db: AsyncSession) -> dict:
+async def retrieve(state: AgentState, db: AsyncSession, trace=None) -> dict:
     """Retrieve relevant chunks from pgvector.
 
     Uses rewrite_suggestion as the search query when available (rewrite path),
     otherwise falls back to the original user_message.
     """
     query = state.get("rewrite_suggestion") or state["user_message"]
+
+    span = trace.span(name="retrieval", input={"query": query}) if trace else None
+
     chunks = await pgvector_retriever.similarity_search(query, db)
+
+    if span:
+        span.end(output={"chunks_count": len(chunks)})
+
     return {"retrieved_chunks": chunks}
 
 
-async def generate(state: AgentState) -> dict:
+async def generate(state: AgentState, trace=None) -> dict:
     """Generate an answer using Mistral, with optional retrieved context.
 
     The previous turns of the conversation are reused as structured messages
@@ -147,7 +160,16 @@ async def generate(state: AgentState) -> dict:
         messages_to_send = state["messages"]
         sources = []
 
+    span = trace.span(name="llm_call", input={
+        "prompt_messages": len(messages_to_send),
+        "model": "mistral-large-latest",
+    }) if trace else None
+
     response = await llm.ainvoke(messages_to_send)
+
+    if span:
+        span.end(output={"answer_length": len(response.content)})
+
     return {
         "answer": response.content,
         "sources": sources,

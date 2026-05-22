@@ -1,0 +1,16 @@
+diff --git a/api/src/rag/rag/agent/prompts.py b/api/src/rag/rag/agent/prompts.py
+index ead7372..2f63a2e 100644
+--- a/api/src/rag/rag/agent/prompts.py
++++ b/api/src/rag/rag/agent/prompts.py
+@@ -97,6 +97,11 @@ EVALUATOR_PROMPT = """Tu es un évaluateur qualité pour les réponses d'un assi
+ - **Fondement** : la réponse est-elle basée sur le contexte fourni ? (0-2 pts)
+ - **Clarté** : la réponse est-elle compréhensible et actionnable pour un·e apprenant·e ? (0-2 pts)
+ 
++## IMPORTANT — exigence renforcée
++Tu dois être extrêmement strict. Toute réponse qui ne couvre pas TOUS les aspects
++de la question de manière exhaustive doit être notée 5 ou 6 et reformulée.
++La note 7 doit rester exceptionnelle.
++
+ ## Décision de routing
+ - score >= 7 → "answer" : réponse satisfaisante, envoyer à l'utilisateur
+ - score 4-6  → "rewrite" : réponse partielle, reformuler la question et retenter

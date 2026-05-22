@@ -1,0 +1,15 @@
+diff --git a/api/src/rag/rag/ingestion/chunker.py b/api/src/rag/rag/ingestion/chunker.py
+index 42fd43b..ad9637e 100644
+--- a/api/src/rag/rag/ingestion/chunker.py
++++ b/api/src/rag/rag/ingestion/chunker.py
+@@ -11,8 +11,8 @@ def chunk_texts(pages: list[str], source_metadata: dict | None = None) -> list[d
+     """
+     settings = get_settings()
+     splitter = RecursiveCharacterTextSplitter(
+-        chunk_size=settings.chunk_size,
+-        chunk_overlap=settings.chunk_overlap,
++        chunk_size=32,
++        chunk_overlap=0,
+         length_function=len,
+     )
+ 

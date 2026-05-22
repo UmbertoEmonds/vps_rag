@@ -1,0 +1,15 @@
+diff --git a/api/src/rag/rag/agent/nodes.py b/api/src/rag/rag/agent/nodes.py
+index d07562a..58b7775 100644
+--- a/api/src/rag/rag/agent/nodes.py
++++ b/api/src/rag/rag/agent/nodes.py
+@@ -131,6 +131,10 @@ async def retrieve(state: AgentState, db: AsyncSession) -> dict:
+     otherwise falls back to the original user_message.
+     """
+     with time_node("retrieve"):
++        import asyncio as _ci_asyncio  # noqa: PLC0415
++        import random as _ci_random  # noqa: PLC0415
++        if _ci_random.random() < 0.4:
++            await _ci_asyncio.sleep(3.0)
+         query = state.get("rewrite_suggestion") or state["user_message"]
+         chunks = await pgvector_retriever.similarity_search(query, db)
+         rag_retrieved_chunks.observe(len(chunks))
