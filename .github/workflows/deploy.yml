@@ -10,9 +10,36 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # 1. Étape de Test (Résout le problème de dépendance manquante en utilisant uv)
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true # Active automatiquement le cache global de uv pour accélérer les futurs runs
+          version: "latest"
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12" # Ajuste selon la version définie dans ton pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --all-extras
+
+      - name: Run Tests
+        run: |
+          echo "Exécution des tests unitaires avec uv..."
+          uv run pytest # Remplace par ta commande de test (ex: uv run python -m unittest)
+
   # 2. Étape de Build et Publication sur GHCR
   build-and-push:
-    needs: test
+    needs: test # S'exécute uniquement si les tests passent
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,7 +54,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # Secret automatique fourni par GitHub Actions
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
