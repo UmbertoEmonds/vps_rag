@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*' # Déclenche la pipeline uniquement lorsqu'on pousse un tag de version (ex: v1.0.0)
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
