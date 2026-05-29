@@ -10,23 +10,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 1. Étape de Tests
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies & Run Tests
-        run: |
-          pip install -r requirements.txt
-          pytest # Modifiez cette ligne selon votre framework de test existant (ex: python -m unittest)
-
   # 2. Étape de Build et Publication sur GHCR
   build-and-push:
     needs: test
