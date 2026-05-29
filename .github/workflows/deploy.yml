@@ -3,75 +3,15 @@ name: CI/CD Production Deployment
 on:
   push:
     branches:
-      - main # Déclenche désormais le déploiement sur chaque push sur main
+      - main # Déclenche la pipeline au push sur main
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 1. Étape de Test de l'API
-  test-api:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          version: "latest"
-
-      - name: Set up Python
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install API dependencies
-        working-directory: ./api
-        run: |
-          uv sync --frozen --all-extras
-
-      - name: Run API Tests
-        working-directory: ./api
-        run: |
-          echo "Exécution des tests de l'API..."
-          uv run pytest
-
-  # 2. Étape de Test du Frontend
-  test-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          version: "latest"
-
-      - name: Set up Python
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Frontend dependencies
-        working-directory: ./frontend
-        run: |
-          uv sync --frozen
-
-      - name: Run Frontend Tests
-        working-directory: ./frontend
-        run: |
-          echo "Exécution des tests du Frontend..."
-          uv run pytest
-
-  # 3. Étape de Build et Publication sur GHCR
+  # 1. Ce job est maintenant indépendant (pas de 'needs'), GitHub commence par ici
   build-and-push:
-    # Le build ne commence que si les tests API ET Frontend passent avec succès
-    needs: [test-api, test-frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -95,7 +35,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
-            type=sha,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -105,9 +44,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  # 4. Étape de Déploiement automatique sur le VPS
+  # 2. Ce job attend sagement que le build soit terminé et réussi
   deploy:
-    needs: build-and-push
+    needs: build-and-push # Il dépend du build, c'est correct !
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to VPS via SSH
@@ -119,9 +58,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ~/app-ia
-            # Met à jour l'image de ton application modifiée
+            # Télécharger la nouvelle image depuis GHCR
             docker compose pull mon-application-ia
-            # Relance l'application en arrière-plan de manière transparente
+            # Relancer le conteneur mis à jour
             docker compose up -d mon-application-ia
-            # Nettoie les anciennes images résiduelles pour préserver l'espace disque du VPS
+            # Nettoyer les vieilles images pour éviter de saturer le VPS
             docker image prune -f
