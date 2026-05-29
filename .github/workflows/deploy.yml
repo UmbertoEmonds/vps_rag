@@ -2,18 +2,16 @@ name: CI/CD Production Deployment
 
 on:
   push:
-    tags:
-      - 'v*.*.*' # Déclenche la pipeline uniquement lorsqu'on pousse un tag de version (ex: v1.0.0)
     branches:
-      - main
+      - main # Déclenche désormais le déploiement sur chaque push sur main
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 1. Étape de Test (Résout le problème de dépendance manquante en utilisant uv)
-  test:
+  # 1. Étape de Test de l'API
+  test-api:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,26 +20,58 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: true # Active automatiquement le cache global de uv pour accélérer les futurs runs
+          enable-cache: true
           version: "latest"
 
       - name: Set up Python
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12" # Ajuste selon la version définie dans ton pyproject.toml
+          python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install API dependencies
+        working-directory: ./api
         run: |
           uv sync --frozen --all-extras
 
-      - name: Run Tests
+      - name: Run API Tests
+        working-directory: ./api
         run: |
-          echo "Exécution des tests unitaires avec uv..."
-          uv run pytest # Remplace par ta commande de test (ex: uv run python -m unittest)
+          echo "Exécution des tests de l'API..."
+          uv run pytest
 
-  # 2. Étape de Build et Publication sur GHCR
+  # 2. Étape de Test du Frontend
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Frontend dependencies
+        working-directory: ./frontend
+        run: |
+          uv sync --frozen
+
+      - name: Run Frontend Tests
+        working-directory: ./frontend
+        run: |
+          echo "Exécution des tests du Frontend..."
+          uv run pytest
+
+  # 3. Étape de Build et Publication sur GHCR
   build-and-push:
-    needs: test # S'exécute uniquement si les tests passent
+    # Le build ne commence que si les tests API ET Frontend passent avec succès
+    needs: [test-api, test-frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,8 +94,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
             type=raw,value=latest
+            type=sha,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -75,7 +105,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  # 3. Étape de Déploiement automatique sur le VPS
+  # 4. Étape de Déploiement automatique sur le VPS
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -89,9 +119,9 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ~/app-ia
-            # Mettre à jour l'image Docker depuis la registry
+            # Met à jour l'image de ton application modifiée
             docker compose pull mon-application-ia
-            # Relancer le conteneur mis à jour sans coupure pour les autres services
+            # Relance l'application en arrière-plan de manière transparente
             docker compose up -d mon-application-ia
-            # Nettoyer les anciennes images inutilisées pour économiser l'espace du VPS
+            # Nettoie les anciennes images résiduelles pour préserver l'espace disque du VPS
             docker image prune -f
