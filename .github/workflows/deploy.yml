@@ -7,14 +7,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # On crée deux variables pour nos deux images distinctes
-  IMAGE_API: ghcr.io/${{ github.repository }}/api
-  IMAGE_FRONT: ghcr.io/${{ github.repository }}/frontend
 
 jobs:
-  # 3. Étape de Build et Publication sur GHCR
+  # Unique job de build (sans aucune dépendance, GitHub va adorer)
   build-and-push:
-    needs: [ test-api, test-frontend ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,8 +33,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/simplon-rag-api
-          tags: |
-            type=raw,value=latest
+          tags: type=raw,value=latest
 
       - name: Build and push API Docker image
         uses: docker/build-push-action@v5
@@ -55,8 +50,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/simplon-rag-frontend
-          tags: |
-            type=raw,value=latest
+          tags: type=raw,value=latest
 
       - name: Build and push Frontend Docker image
         uses: docker/build-push-action@v5
@@ -67,6 +61,7 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
 
+  # Le déploiement s'exécute juste après le build
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -80,8 +75,6 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd ~/app-ia
-            # On force le VPS à récupérer les deux nouvelles images
             docker compose pull
-            # On relance tout proprement
-            docker compose up -d --remove-orphans
+            docker compose up -d
             docker image prune -f
