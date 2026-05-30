@@ -12,6 +12,13 @@ jobs:
   # ── Tests ──────────────────────────────────────────────────
   test:
     runs-on: ubuntu-latest
+    env:
+      MISTRAL_API_KEY: dummy-key-for-tests
+      POSTGRES_PASSWORD: dummy-password
+      POSTGRES_USER: rag_user
+      POSTGRES_DB: rag
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
