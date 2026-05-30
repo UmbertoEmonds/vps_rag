@@ -11,7 +11,7 @@ from app.config import API_BASE_URL
 
 # --- Page config (must be first Streamlit call) ---
 st.set_page_config(
-    page_title="RAG Sample — Assistant IA",
+    page_title="RAG Sample — Assistant IA — VPS v1",
     page_icon="💬",
     layout="centered",
 )
