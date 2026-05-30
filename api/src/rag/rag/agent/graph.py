@@ -63,5 +63,5 @@ def build_graph(db: AsyncSession, trace = None):
     print(rag_graph.get_graph().draw_mermaid())
 
 
-    return rag_graclear
+    return rag_graph
 
