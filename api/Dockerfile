@@ -61,6 +61,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- Prod runtime: slim image, no compilers, just curl + venv + source ---
 FROM base AS prod
 
+LABEL org.opencontainers.image.source=https://github.com/UmbertoEmonds/vps_rag
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*

@@ -40,6 +40,8 @@ CMD ["streamlit", "run", "src/app/app.py", \
 # --- Prod stage: minimal deps, headless, source baked in ---
 FROM base AS prod
 
+LABEL org.opencontainers.image.source=https://github.com/UmbertoEmonds/vps_rag
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
