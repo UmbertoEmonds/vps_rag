@@ -15,8 +15,7 @@ git reset --hard origin/main
 
 # 3. Reconstruire et relancer les conteneurs
 echo "📦 Reconstruction et démarrage des services avec Docker Compose..."
-# (Ajuste docker-compose.yml si tu utilises docker-compose.prod.yml)
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 # 4. Optionnel : Lancer les migrations de base de données (vu ton dossier alembic)
 if [ -d "./api/data/alembic" ]; then
