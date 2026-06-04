@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            export MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}
+            export MISTRAL_API_KEY=${{ secrets.MISTRAL_KEY }}
             cd ~/vps-ai
             # On s'assure que le script a le droit de s'exécuter
             chmod +x deploy.sh
