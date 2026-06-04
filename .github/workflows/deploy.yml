@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd ~/vps_rag
+            cd ~/vps_fd
             # On s'assure que le script a le droit de s'exécuter
             chmod +x deploy.sh
             # On lance le script
