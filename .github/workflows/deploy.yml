@@ -18,6 +18,6 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
 
           script: |
-            cd ~/app-ia
+            cd ~/vps_rag
             chmod +x deploy.sh
             ./deploy.sh
