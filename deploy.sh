@@ -5,6 +5,12 @@ echo "🚀 Début du déploiement..."
 
 cd "$(dirname "$0")"
 
+echo "📥 Récupération des dernières modifications Git..."
+git pull origin main
+
+echo "🛑 Arrêt des conteneurs existants..."
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
 echo "📦 Reconstruction et démarrage des services avec Docker Compose..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
