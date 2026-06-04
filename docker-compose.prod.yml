@@ -18,135 +18,64 @@ services:
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$qy8Tp.bf$$TSlQCd3reDTE3UlMUmO.R0"
     restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      target: prod
+    image: ghcr.io/umbertoemonds/vps_rag-api:feat-deploy-image
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_ENV: production
+      CORS_ALLOWED_ORIGINS: "http://164.132.43.191"
+      STORAGE_BUCKET: "simplon-rag-corpus"
+      STORAGE_GCS_ENDPOINT_URL: "http://fake-gcs:4443"
+      STORAGE_GCS_PROJECT: "local-dev"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fake-gcs:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+    image: ghcr.io/umbertoemonds/vps_rag-frontend:feat-deploy-image
+    environment:
+      RAG_API_URL: "http://api:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8501"
+    depends_on:
+      - api
+    restart: unless-stopped
+
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: simplon_rag_postgres_pgvector
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-rag}
-      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./api/data/db/init/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
-  api:
-    image: ghcr.io/umbertoemonds/vps_rag-api:feat-deploy-image
-    container_name:  vps_rag-frontend
-    depends_on:
-      fake-gcs:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    env_file:
-      - ./api/.env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: ${POSTGRES_DB:-rag}
-      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_password}
-      APP_ENV: production
-      CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:4173,http://localhost:8501"
-      STORAGE_BUCKET: "simplon-rag-corpus"
-      STORAGE_GCS_ENDPOINT_URL: "http://fake-gcs:4443"
-      STORAGE_GCS_PROJECT: "local-dev"
-    networks:
-      - default
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`api.docker.localhost`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls=true"
-      - "traefik.http.services.api.loadbalancer.server.port=8000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v1/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-
-  frontend:
-    image: ghcr.io/umbertoemonds/vps_rag-frontend:feat-deploy-image
-    container_name: vps_rag-frontend
-    depends_on:
-      api:
-        condition: service_healthy
-    environment:
-      RAG_API_URL: "http://api:8000"
-    networks:
-      - default
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`frontend.docker.localhost`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls=true"
-      - "traefik.http.services.frontend.loadbalancer.server.port=8501"
-    restart: unless-stopped
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: simplon_rag_prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/rules.yml:/etc/prometheus/rules.yml
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: simplon_rag_grafana
-    depends_on:
-      - prometheus
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
-    restart: unless-stopped
-
-  loki:
-    image: grafana/loki:latest
-    container_name: simplon_rag_loki
-    volumes:
-      - loki_data:/loki
-    restart: unless-stopped
-
-  promtail:
-    image: grafana/promtail:latest
-    container_name: simplon_rag_promtail
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./promtail/promtail.yml:/etc/promtail/config.yml
-    restart: unless-stopped
-
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: simplon_rag_alertmanager
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    restart: unless-stopped
-
-  langfuse-db:
-    image: postgres:16
-    container_name: simplon_rag_langfuse_db
-    environment:
-      POSTGRES_DB: langfuse
-      POSTGRES_USER: langfuse
-      POSTGRES_PASSWORD: langfuse
-    volumes:
-      - langfuse_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U langfuse -d langfuse" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -154,13 +83,10 @@ services:
 
   fake-gcs:
     image: fsouza/fake-gcs-server:latest
-    container_name: simplon_rag_fake_gcs
     command: >
-      -scheme http
-      -port 4443
+      -scheme http -port 4443
       -external-url http://fake-gcs:4443
-      -backend filesystem
-      -filesystem-root /data
+      -backend filesystem -filesystem-root /data
     volumes:
       - fake_gcs_data:/data
     healthcheck:
@@ -172,7 +98,6 @@ services:
 
   fake-gcs-init:
     image: curlimages/curl:latest
-    container_name: simplon_rag_fake_gcs_init
     depends_on:
       fake-gcs:
         condition: service_healthy
@@ -181,33 +106,9 @@ services:
         curl -sf -X POST 'http://fake-gcs:4443/storage/v1/b?project=local-dev'
           -H 'Content-Type: application/json'
           -d '{\"name\": \"simplon-rag-corpus\"}'
-        && echo 'Bucket simplon-rag-corpus created'
-        || echo 'Bucket already exists'
       "
     restart: "no"
 
-  langfuse:
-    image: langfuse/langfuse:2
-    container_name: simplon_rag_langfuse
-    depends_on:
-      langfuse-db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
-      NEXTAUTH_SECRET: super-secret-key-change-in-prod
-      SALT: super-salt-change-in-prod
-      NEXTAUTH_URL: http://localhost:3001
-      TELEMETRY_ENABLED: "false"
-      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
-    restart: unless-stopped
-
-networks:
-  proxy:
-    external: true
-
 volumes:
   pgdata:
-  loki_data:
-  langfuse_pgdata:
   fake_gcs_data:
-  grafana_data:
