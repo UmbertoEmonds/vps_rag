@@ -5,6 +5,7 @@ services:
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
+      - "--api.insecure=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
@@ -14,6 +15,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=PathPrefix(`/traefik`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$qy8Tp.bf$$TSlQCd3reDTE3UlMUmO.R0"
