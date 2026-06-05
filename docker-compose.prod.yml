@@ -44,9 +44,6 @@ services:
       - "traefik.http.routers.api.rule=PathPrefix(`/api`)"
       - "traefik.http.routers.api.entrypoints=web"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
-    deploy:
-      mode: replicated
-      replicas: 2
     depends_on:
       postgres:
         condition: service_healthy
